@@ -98,9 +98,27 @@ const LoginPage = () => {
         </form>
 
         <div className="mt-6 text-center">
-          <a href="#" className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200">
-            ¿Olvidaste tu contraseña?
-          </a>
+          <div className="flex items-center justify-center gap-4">
+            <a
+              href="/auth/recuperar"
+              className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              aria-label="Recuperar contraseña"
+            >
+              ¿Olvidaste tu contraseña?
+            </a>
+
+            <span className="hidden sm:inline-block w-px h-4 bg-gray-200" aria-hidden="true" />
+
+            <a
+              href="/auth/registro"
+              className="inline-block py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+              aria-label="Registrarse"
+            >
+              Regístrate
+            </a>
+          </div>
+
+          <p className="mt-2 text-xs text-gray-500">También puedes crear una cuenta nueva si aún no tienes una.</p>
         </div>
       </div>
     </div>
