@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/services/supabaseClient';
 
 const LoginPage = () => {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,25 +19,22 @@ const LoginPage = () => {
       return;
     }
 
-    // Aquí puedes llamar a la API para verificar las credenciales
+    // Hacer el sign-in en el cliente con Supabase para que la sesión se establezca localmente
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Aquí manejar el éxito (por ejemplo, redirigir a la página principal)
-        window.location.href = '/dashboard'; // Redirige a la página de inicio
-      } else {
-        setError(data.message || 'Error en el inicio de sesión');
+      if (error) {
+        setError(error.message || 'Error en el inicio de sesión');
+        return;
       }
+
+      // Si todo OK, navegar al dashboard (la sesión ya está en el cliente)
+      router.push('/dashboard');
     } catch (err) {
+      console.error('Login error:', err);
       setError('Hubo un error al intentar iniciar sesión');
     }
   };
