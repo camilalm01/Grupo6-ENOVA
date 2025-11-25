@@ -156,7 +156,7 @@ export default function HomePage() {
       return;
     }
 
-    // MODO CREAR 
+    // MODO CREAR
     const { data, error } = await supabase
       .from('posts')
       .insert({
@@ -183,6 +183,11 @@ export default function HomePage() {
 
     if (error) {
       console.error('Error creando post', error);
+      if (error.code === '23503') {
+        alert('Error: Tu usuario no tiene un perfil asociado. Por favor contacta a soporte o intenta reloguearte.');
+      } else {
+        alert('Error al crear la publicación. Inténtalo de nuevo.');
+      }
     } else if (data) {
       const newPost = normalizePost(data);
       setPosts(prev => [newPost, ...prev]);
@@ -235,8 +240,11 @@ export default function HomePage() {
 
   if (loadingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 text-sm">Verificando sesión…</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-radial">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Verificando sesión…</p>
+        </div>
       </div>
     );
   }
@@ -250,16 +258,16 @@ export default function HomePage() {
     'Usuaria';
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-radial pb-16 md:pb-0">
       {/* NAVBAR */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-              AF
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+              🌸
             </div>
             <span className="font-semibold text-lg text-gray-800">
-              Plataforma de Autonomía Femenina
+              ENOVA
             </span>
           </div>
 
@@ -267,8 +275,8 @@ export default function HomePage() {
             <nav className="hidden md:flex gap-6 text-sm text-gray-600">
               <button className="font-medium text-purple-600">Inicio</button>
               <button
-                onClick={() => router.push('/chat')} // 👈 ajusta a la ruta real de tu chat
-                className="hover:text-purple-600"
+                onClick={() => router.push('/chat')}
+                className="hover:text-purple-600 transition-colors"
               >
                 Chat
               </button>
@@ -278,22 +286,22 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setIsAvatarMenuOpen(prev => !prev)}
-                className="w-9 h-9 rounded-full bg-purple-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:bg-purple-600 transition"
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:shadow-lg transition-all"
               >
                 {selfProfileName.charAt(0).toUpperCase()}
               </button>
 
               {isAvatarMenuOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg text-sm z-20">
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl text-sm z-20 overflow-hidden animate-fadeIn">
                   <button
                     type="button"
                     onClick={() => {
                       setIsAvatarMenuOpen(false);
                       router.push('/profile');
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-t-xl"
+                    className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors"
                   >
-                    Mi perfil
+                    👤 Mi perfil
                   </button>
                   <button
                     type="button"
@@ -301,9 +309,9 @@ export default function HomePage() {
                       setIsAvatarMenuOpen(false);
                       await handleLogout();
                     }}
-                    className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-b-xl"
+                    className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    Cerrar sesión
+                    👋 Cerrar sesión
                   </button>
                 </div>
               )}
@@ -315,33 +323,33 @@ export default function HomePage() {
       {/* CONTENIDO */}
       <main className="mx-auto max-w-2xl px-4 py-6 space-y-4">
         {/* Form nueva publicación */}
-        <section className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 space-y-4">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-purple-300 flex items-center justify-center text-white font-semibold">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold shadow-sm">
               {selfProfileName.charAt(0).toUpperCase()}
             </div>
 
             <div className="flex-1">
               <textarea
-                className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full resize-none rounded-2xl border-2 border-gray-100 px-4 py-3 text-sm focus:outline-none focus:border-purple-300 focus:ring-4 focus:ring-purple-50 transition-all"
                 rows={3}
-                placeholder="¿Qué quieres compartir hoy?"
+                placeholder="¿Qué quieres compartir hoy? 💜"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               />
-              <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div className="flex flex-col md:flex-row gap-2 text-xs">
                   <input
                     type="text"
-                    className="border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                    placeholder="Etiquetas (ej: bienestar,autocuidado)"
+                    className="input py-2 text-sm"
+                    placeholder="🏷️ Etiquetas (ej: bienestar, autocuidado)"
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
                   />
                   <input
                     type="text"
-                    className="border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                    placeholder="URL de imagen (opcional)"
+                    className="input py-2 text-sm"
+                    placeholder="🖼️ URL de imagen (opcional)"
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                   />
@@ -350,11 +358,11 @@ export default function HomePage() {
                 <button
                   onClick={handleSubmitPost}
                   disabled={creating || !content.trim()}
-                  className="mt-2 md:mt-0 inline-flex items-center justify-center rounded-full bg-purple-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                  className="mt-2 md:mt-0 btn btn-primary px-6 py-2.5 text-sm"
                 >
                   {creating
-                    ? (isEditing ? 'Guardando cambios…' : 'Publicando…')
-                    : (isEditing ? 'Guardar cambios' : 'Publicar')}
+                    ? (isEditing ? 'Guardando...' : 'Publicando...')
+                    : (isEditing ? '✨ Guardar cambios' : '💜 Publicar')}
                 </button>
               </div>
             </div>
@@ -363,26 +371,27 @@ export default function HomePage() {
 
         {/* Feed */}
         {loadingPosts ? (
-          <p className="text-center text-gray-500 text-sm">
-            Cargando publicaciones…
-          </p>
+          <div className="text-center py-12">
+            <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500 text-sm">Cargando publicaciones…</p>
+          </div>
         ) : posts.length === 0 ? (
-          <p className="text-center text-gray-500 text-sm">
-            Aún no hay publicaciones. ¡Sé la primera en compartir algo! 💜
-          </p>
+          <div className="text-center py-12 bg-white rounded-3xl border border-gray-100">
+            <span className="text-5xl mb-4 block">💜</span>
+            <p className="text-gray-600 font-medium">Aún no hay publicaciones</p>
+            <p className="text-gray-400 text-sm mt-1">¡Sé la primera en compartir algo!</p>
+          </div>
         ) : (
           <section className="space-y-4">
             {posts.map((post) => {
               const isOwner = post.user_id === user.id;
               const profile = post.profiles;
-              const name =
-                profile?.full_name ||
-                selfProfileName; // si aún no tienes join bien hecho
+              const name = profile?.full_name || selfProfileName;
 
               return (
                 <article
                   key={post.id}
-                  className="bg-white rounded-2xl shadow-sm p-4 space-y-3"
+                  className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 space-y-4 hover:border-purple-100 transition-all animate-fadeIn"
                 >
                   {/* Header del post */}
                   <div className="flex justify-between">
@@ -391,18 +400,18 @@ export default function HomePage() {
                         <img
                           src={profile.avatar_url}
                           alt={name ?? 'Usuaria'}
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-11 h-11 rounded-full object-cover border-2 border-purple-100"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-purple-300 flex items-center justify-center text-white font-semibold">
+                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold shadow-sm">
                           {name?.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-800">
                           {name}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-400">
                           {formatDate(post.created_at)}
                         </span>
                       </div>
@@ -412,23 +421,23 @@ export default function HomePage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEditPost(post)}
-                          className="text-xs px-3 py-1 rounded-full border border-gray-200 hover:bg-gray-50"
+                          className="text-xs px-3 py-1.5 rounded-full border border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors"
                         >
-                          Editar
+                          ✏️ Editar
                         </button>
                         <button
                           onClick={() => handleDeletePost(post.id)}
-                          className="text-xs px-3 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                          className="text-xs px-3 py-1.5 rounded-full border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
                         >
-                          Eliminar
+                          🗑️ Eliminar
                         </button>
                       </div>
                     )}
                   </div>
 
                   {/* Contenido */}
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-800 whitespace-pre-line">
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
                       {post.content}
                     </p>
 
@@ -436,16 +445,16 @@ export default function HomePage() {
                       <img
                         src={post.image_url}
                         alt="Imagen de la publicación"
-                        className="mt-2 w-full rounded-xl object-cover max-h-80"
+                        className="w-full rounded-2xl object-cover max-h-80 border border-gray-100"
                       />
                     )}
 
                     {post.tags?.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-1">
+                      <div className="flex flex-wrap gap-2">
                         {post.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="inline-flex items-center rounded-full bg-purple-100 px-3 py-0.5 text-xs font-medium text-purple-700"
+                            className="badge"
                           >
                             {tag}
                           </span>
@@ -459,6 +468,36 @@ export default function HomePage() {
           </section>
         )}
       </main>
+
+      {/* Mobile navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200 px-4 py-2 z-10">
+        <div className="flex justify-around">
+          <button className="flex flex-col items-center text-purple-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+            </svg>
+            <span className="text-xs mt-1">Inicio</span>
+          </button>
+          <button
+            onClick={() => router.push('/chat')}
+            className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+            </svg>
+            <span className="text-xs mt-1">Chat</span>
+          </button>
+          <button
+            onClick={() => router.push('/profile')}
+            className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+            <span className="text-xs mt-1">Perfil</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

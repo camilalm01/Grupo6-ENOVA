@@ -9,13 +9,17 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
     // Validación básica de los campos
     if (!email || !password) {
-      setError('Por favor ingrese un email y una contraseña');
+      setError('Nos encantaría saber tu email y contraseña 💜');
+      setLoading(false);
       return;
     }
 
@@ -27,7 +31,8 @@ const LoginPage = () => {
       });
 
       if (error) {
-        setError(error.message || 'Error en el inicio de sesión');
+        setError('Hmm, no reconocemos esos datos. ¿Lo intentamos de nuevo?');
+        setLoading(false);
         return;
       }
 
@@ -35,30 +40,47 @@ const LoginPage = () => {
       router.push('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
-      setError('Hubo un error al intentar iniciar sesión');
+      setError('¡Ups! Algo no salió bien. ¿Volvemos a intentarlo?');
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-radial px-4">
+      {/* Decoración de fondo */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[var(--color-primary-soft)] rounded-full blur-3xl opacity-60"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[var(--color-secondary-soft)] rounded-full blur-3xl opacity-60"></div>
+      </div>
+
+      <div className="relative bg-white p-8 md:p-10 rounded-[2rem] shadow-xl w-full max-w-md border border-[var(--color-border-soft)] animate-fadeInScale">
+        {/* Logo y título */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Iniciar sesión</h2>
-          <p className="text-gray-600">Ingresa a tu cuenta</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] text-white text-2xl font-bold mb-4 shadow-lg">
+            🌸
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text-primary)] mb-2">
+            ¡Hola de nuevo! 💜
+          </h1>
+          <p className="text-[var(--color-text-secondary)]">
+            Ingresa a tu espacio seguro
+          </p>
         </div>
-        
+
+        {/* Alerta de error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center">
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            {error}
+          <div className="alert alert-error mb-6 animate-fadeIn">
+            <span className="text-xl">😔</span>
+            <p className="text-sm">{error}</p>
           </div>
         )}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <label htmlFor="email" className="block text-sm font-semibold text-gray-800 mb-2">
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2"
+            >
               Correo electrónico
             </label>
             <input
@@ -68,13 +90,16 @@ const LoginPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white text-gray-800 placeholder-gray-500"
+              className="input"
               placeholder="tu@email.com"
             />
           </div>
 
-          <div className="mb-8">
-            <label htmlFor="password" className="block text-sm font-semibold text-gray-800 mb-2">
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-semibold text-[var(--color-text-primary)] mb-2"
+            >
               Contraseña
             </label>
             <input
@@ -84,41 +109,50 @@ const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white text-gray-800 placeholder-gray-500"
-              placeholder="Ingresa tu contraseña"
+              className="input"
+              placeholder="Tu contraseña secreta"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-200 transition-all duration-200 shadow-lg"
+            disabled={loading}
+            className="w-full btn btn-primary py-3.5 text-base mt-2"
           >
-            Iniciar sesión
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                Entrando...
+              </span>
+            ) : (
+              '💜 Iniciar sesión'
+            )}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <div className="flex items-center justify-center gap-4">
+        {/* Footer del formulario */}
+        <div className="mt-8 pt-6 border-t border-[var(--color-border-soft)]">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm">
             <a
               href="/auth/recuperar"
-              className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200"
-              aria-label="Recuperar contraseña"
+              className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors duration-200"
             >
               ¿Olvidaste tu contraseña?
             </a>
 
-            <span className="hidden sm:inline-block w-px h-4 bg-gray-200" aria-hidden="true" />
+            <span className="hidden sm:block w-1 h-1 rounded-full bg-[var(--color-border)]"></span>
 
             <a
               href="/auth/registro"
-              className="inline-block py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
-              aria-label="Registrarse"
+              className="btn btn-secondary py-2 px-4 text-sm"
             >
-              Regístrate
+              ✨ Crear cuenta
             </a>
           </div>
 
-          <p className="mt-2 text-xs text-gray-500">También puedes crear una cuenta nueva si aún no tienes una.</p>
+          <p className="mt-4 text-center text-xs text-[var(--color-text-muted)]">
+            ¿Primera vez aquí? Te damos la bienvenida a nuestra comunidad 🌸
+          </p>
         </div>
       </div>
     </div>

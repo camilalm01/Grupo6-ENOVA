@@ -109,7 +109,7 @@ export function setupSocketHandlers(io: Server) {
          */
         socket.on('send_message', async (messageData: MessageData) => {
             try {
-                const { userId, roomId, message, username } = messageData;
+                const { userId, roomId, message, username, clientMessageId } = messageData;
 
                 // Validaciones
                 if (!message || message.trim() === '') {
@@ -130,7 +130,8 @@ export function setupSocketHandlers(io: Server) {
                     message: message.trim(),
                     roomId: roomId,
                     timestamp: new Date().toISOString(),
-                    socketId: socket.id
+                    socketId: socket.id,
+                    clientMessageId: clientMessageId // 👈 Pasamos el ID del cliente
                 };
 
                 console.log('📨 Mensaje recibido:', enrichedMessage);

@@ -30,6 +30,7 @@ export interface MessageData {
   message: string;
   roomId: string;
   username?: string;
+  clientMessageId?: string;
 }
 
 export interface ChatMessage {

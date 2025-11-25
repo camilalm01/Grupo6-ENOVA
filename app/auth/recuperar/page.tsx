@@ -14,13 +14,13 @@ export default function RecuperarPage() {
     setSuccess(null);
 
     if (!email) {
-      setError('Ingresa tu correo electrónico.');
+      setError('Necesitamos tu correo para ayudarte 💜');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('Ingresa un correo válido.');
+      setError('Hmm, ese correo no parece válido. ¿Puedes verificarlo?');
       return;
     }
 
@@ -35,75 +35,99 @@ export default function RecuperarPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'No se pudo enviar el correo.');
+        setError(data.error || '¡Ups! No pudimos enviar el correo. ¿Lo intentamos de nuevo?');
         return;
       }
 
       setSuccess(
         data.message ||
-          'Si el correo existe, se ha enviado un enlace para restablecer la contraseña.'
+          '¡Listo! 📧 Revisa tu correo, te enviamos un enlace para restablecer tu contraseña.'
       );
       setEmail('');
     } catch (err: any) {
-      setError('Ocurrió un error inesperado. Intenta de nuevo.');
+      setError('¡Vaya! Ocurrió un error inesperado. ¿Volvemos a intentarlo?');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
-        <h1 className="text-2xl font-semibold text-blue-800 mb-2">
-          Recuperar contraseña
-        </h1>
-        <p className="text-sm text-gray-600 mb-6">
-          Ingresa el correo con el que te registraste y te enviaremos un enlace
-          para restablecer tu contraseña.
-        </p>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-radial px-4">
+      {/* Decoración de fondo */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-100 rounded-full blur-3xl opacity-60"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-100 rounded-full blur-3xl opacity-60"></div>
+      </div>
 
+      <div className="relative bg-white p-8 md:p-10 rounded-4xl shadow-xl w-full max-w-md border border-gray-100 animate-fadeInScale">
+        {/* Logo y título */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-400 text-white text-2xl font-bold mb-4 shadow-lg">
+            🔑
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+            ¿Olvidaste tu contraseña?
+          </h1>
+          <p className="text-gray-600">
+            No te preocupes, te ayudamos a recuperarla 💜
+          </p>
+        </div>
+
+        {/* Alertas */}
         {error && (
-          <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
-            {error}
+          <div className="alert alert-error mb-6 animate-fadeIn">
+            <span className="text-xl">😔</span>
+            <p className="text-sm">{error}</p>
           </div>
         )}
         {success && (
-          <div className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
-            {success}
+          <div className="alert alert-success mb-6 animate-fadeIn">
+            <span className="text-xl">📧</span>
+            <p className="text-sm">{success}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Correo electrónico
+            <label className="block text-sm font-semibold text-gray-800 mb-2">
+              Tu correo electrónico
             </label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="input"
               placeholder="tucorreo@ejemplo.com"
             />
           </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              >
-                {loading ? 'Enviando enlace…' : 'Enviar enlace de recuperación'}
-              </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full btn btn-primary py-3.5 text-base"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                Enviando enlace...
+              </span>
+            ) : (
+              '📧 Enviar enlace de recuperación'
+            )}
+          </button>
 
-          <p className="mt-3 text-xs text-center text-gray-600">
-            ¿Recordaste tu contraseña?{' '}
-            <a
-              href="/login"
-              className="font-medium text-blue-700 hover:underline"
-            >
-              Volver al inicio de sesión
-            </a>
-          </p>
+          {/* Footer */}
+          <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+            <p className="text-sm text-gray-500">
+              ¿Recordaste tu contraseña?{' '}
+              <a
+                href="/login"
+                className="font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+              >
+                Volver al inicio de sesión
+              </a>
+            </p>
+          </div>
         </form>
       </div>
     </main>

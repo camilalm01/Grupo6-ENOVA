@@ -37,7 +37,7 @@ export default function ChatPage() {
   // Mostrar loading mientras se verifica la sesión
   if (loadingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-radial">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500 text-sm">Verificando sesión…</p>
@@ -61,16 +61,16 @@ export default function ChatPage() {
   const roomId = 'general'; // Sala por defecto
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-16 md:pb-0">
-      {/* NAVBAR - Consistente con el dashboard */}
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gradient-radial pb-16 md:pb-0">
+      {/* NAVBAR */}
+      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-              AF
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+              🌸
             </div>
             <span className="font-semibold text-lg text-gray-800">
-              Plataforma de Autonomía Femenina
+              ENOVA
             </span>
           </div>
 
@@ -78,7 +78,7 @@ export default function ChatPage() {
             <nav className="hidden md:flex gap-6 text-sm text-gray-600">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="hover:text-purple-600"
+                className="hover:text-purple-600 transition-colors"
               >
                 Inicio
               </button>
@@ -89,22 +89,22 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={() => setIsAvatarMenuOpen((prev) => !prev)}
-                className="w-9 h-9 rounded-full bg-purple-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:bg-purple-600 transition"
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:shadow-lg transition-all"
               >
                 {selfProfileName.charAt(0).toUpperCase()}
               </button>
 
               {isAvatarMenuOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg text-sm z-20">
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl text-sm z-20 overflow-hidden animate-fadeIn">
                   <button
                     type="button"
                     onClick={() => {
                       setIsAvatarMenuOpen(false);
                       router.push('/profile');
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-t-xl"
+                    className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors"
                   >
-                    Mi perfil
+                    👤 Mi perfil
                   </button>
                   <button
                     type="button"
@@ -112,9 +112,9 @@ export default function ChatPage() {
                       setIsAvatarMenuOpen(false);
                       await handleLogout();
                     }}
-                    className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-50 rounded-b-xl"
+                    className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    Cerrar sesión
+                    👋 Cerrar sesión
                   </button>
                 </div>
               )}
@@ -139,14 +139,14 @@ export default function ChatPage() {
         <ChatRoom roomId={roomId} userId={userId} username={username} />
 
         {/* Footer informativo */}
-        <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-100">
+        <div className="mt-6 p-5 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
           <div className="flex items-start gap-3">
             <span className="text-2xl">💜</span>
             <div>
-              <h3 className="font-medium text-purple-800 mb-1">
+              <h3 className="font-semibold text-purple-800 mb-2">
                 Normas del Chat
               </h3>
-              <ul className="text-sm text-purple-700 space-y-1">
+              <ul className="text-sm text-purple-700 space-y-1.5">
                 <li>• Este es un espacio de apoyo mutuo y respeto</li>
                 <li>• No compartas información personal sensible</li>
                 <li>• Si necesitas ayuda urgente, contacta a los recursos de emergencia</li>
@@ -157,11 +157,11 @@ export default function ChatPage() {
       </main>
 
       {/* Mobile navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200 px-4 py-2 z-10">
         <div className="flex justify-around">
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex flex-col items-center text-gray-600 hover:text-purple-600"
+            className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -198,7 +198,7 @@ export default function ChatPage() {
           </button>
           <button
             onClick={() => router.push('/profile')}
-            className="flex flex-col items-center text-gray-600 hover:text-purple-600"
+            className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

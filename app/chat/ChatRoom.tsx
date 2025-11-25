@@ -28,6 +28,8 @@ interface Message {
   message: string;
   timestamp: string;
   socketId?: string;
+  clientMessageId?: string; // 👈 ID temporal del cliente
+  pending?: boolean;        // 👈 Estado de envío
 }
 
 interface ChatRoomProps {
@@ -48,14 +50,15 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   // Helper para mapear la fecha correctamente
   const mapMessageDate = (data: any): Message => ({
     ...data,
+    userId: data.userId || data.user_id, // 👈 Mapear user_id de BD a userId del componente
     message: data.message || data.content || "",
     timestamp: data.timestamp || data.created_at || "",
   });
-  const [isSending, setIsSending] = useState(false);
 
   // Referencias
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -77,6 +80,13 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
         reconnectionDelay: 1000,
         reconnectionAttempts: 5
       });
+    }
+
+    // 🛑 FIX: Si ya está conectado (al volver de otra página), sincronizar estado manualmente
+    if (socket.connected) {
+      console.log("⚡ Socket ya conectado, sincronizando estado...");
+      setIsConnected(true);
+      socket.emit("join_room", { roomId, userId });
     }
 
     // ───────────────────────────────────────────────────
@@ -105,7 +115,22 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
     // ───────────────────────────────────────────────────
     const handleReceiveMessage = (data: any) => {
       console.log("📨 Mensaje recibido:", data);
-      setMessages((prev) => [...prev, mapMessageDate(data)]);
+      const newMessage = mapMessageDate(data);
+
+      setMessages((prev) => {
+        // Si el mensaje tiene clientMessageId, buscamos si ya existe (optimistic update)
+        if (newMessage.clientMessageId) {
+          const existingIndex = prev.findIndex(m => m.clientMessageId === newMessage.clientMessageId);
+          if (existingIndex !== -1) {
+            // Reemplazamos el mensaje pendiente con el confirmado
+            const updated = [...prev];
+            updated[existingIndex] = { ...newMessage, pending: false };
+            return updated;
+          }
+        }
+        // Si no existe, lo agregamos al final
+        return [...prev, newMessage];
+      });
     };
 
     const handleChatHistory = (history: any[]) => {
@@ -184,14 +209,33 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
       return;
     }
 
+    // Generar ID temporal único
+    const clientMessageId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+
+    // 1. OPTIMISTIC UI: Agregar mensaje inmediatamente
+    const optimisticMessage: Message = {
+      id: clientMessageId, // Usamos ID temporal como key
+      userId,
+      username,
+      message: message.trim(),
+      timestamp,
+      socketId: socket.id,
+      clientMessageId,
+      pending: true // Marcamos como pendiente
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
     setIsSending(true);
 
     const messageData: Omit<Message, 'id'> = {
       userId,
       username,
       message: message.trim(),
-      timestamp: new Date().toISOString(),
-      socketId: socket.id
+      timestamp,
+      socketId: socket.id,
+      clientMessageId, // Enviamos el ID para reconciliación
+      pending: false
     };
 
     // Emitir evento al servidor
@@ -252,11 +296,11 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
   // RENDERIZADO DEL COMPONENTE
   // ═══════════════════════════════════════════════════════
   return (
-    <div className="flex flex-col h-[500px] w-full border border-gray-200 rounded-xl shadow-lg bg-white overflow-hidden">
+    <div className="flex flex-col h-[500px] w-full border border-gray-100 rounded-3xl shadow-lg bg-white overflow-hidden">
       {/* ───────────────────────────────────────────────── */}
       {/* HEADER DEL CHAT */}
       {/* ───────────────────────────────────────────────── */}
-      <div className="p-4 bg-purple-600 text-white flex justify-between items-center">
+      <div className="p-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
             <svg
@@ -275,15 +319,15 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
             </svg>
           </div>
           <div>
-            <h2 className="font-semibold">Sala de Chat</h2>
-            <p className="text-xs text-purple-200">#{roomId}</p>
+            <h2 className="font-semibold">Sala de Apoyo 💜</h2>
+            <p className="text-xs text-purple-100">#{roomId}</p>
           </div>
         </div>
 
         {/* Indicador de Conexión */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1.5">
           <div
-            className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"}`}
+            className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-400 animate-pulse" : "bg-red-400"}`}
           />
           <span className="text-sm">
             {isConnected ? "Conectada" : "Desconectada"}
@@ -294,25 +338,27 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
       {/* ───────────────────────────────────────────────── */}
       {/* ÁREA DE MENSAJES */}
       {/* ───────────────────────────────────────────────── */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
+      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gradient-to-b from-purple-50/30 to-white">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-12 h-12 mb-3"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"
-              />
-            </svg>
-            <p className="font-medium">No hay mensajes aún</p>
-            <p className="text-sm">¡Sé la primera en enviar un mensaje!</p>
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-8 h-8 text-purple-400"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"
+                />
+              </svg>
+            </div>
+            <p className="font-medium text-gray-600">No hay mensajes aún 💬</p>
+            <p className="text-sm text-gray-400 mt-1">¡Sé la primera en iniciar la conversación!</p>
           </div>
         ) : (
           <>
@@ -326,18 +372,17 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
                 >
                   {/* Nombre del usuario (solo mensajes ajenos) */}
                   {!isOwn && (
-                    <span className="text-xs text-gray-500 mb-1 ml-2">
+                    <span className="text-xs text-purple-500 font-medium mb-1 ml-2">
                       {msg.username}
                     </span>
                   )}
 
                   {/* Burbuja del mensaje */}
                   <div
-                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm ${
-                      isOwn
-                        ? "bg-purple-600 text-white rounded-br-sm"
-                        : "bg-white border border-gray-200 text-gray-800 rounded-bl-sm"
-                    }`}
+                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm transition-opacity duration-200 ${isOwn
+                      ? "bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-br-sm"
+                      : "bg-white border border-purple-100 text-gray-800 rounded-bl-sm"
+                      } ${msg.pending ? "opacity-70" : "opacity-100"}`}
                   >
                     <p className="text-sm leading-relaxed break-words">
                       {msg.message}
@@ -346,8 +391,11 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
 
                   {/* Timestamp */}
                   {msg.timestamp && (
-                    <span className={`text-xs text-gray-400 mt-1 ${isOwn ? "mr-2" : "ml-2"}`}>
+                    <span className={`text-xs text-gray-400 mt-1 flex items-center gap-1 ${isOwn ? "mr-2" : "ml-2"}`}>
                       {formatTime(msg.timestamp)}
+                      {msg.pending && (
+                        <span className="w-2 h-2 rounded-full border border-gray-400 border-t-transparent animate-spin" />
+                      )}
                     </span>
                   )}
                 </div>
@@ -356,15 +404,15 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
 
             {/* Indicador de "escribiendo..." */}
             {isTyping && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 ml-2">
+              <div className="flex items-center gap-2 text-sm text-purple-500 ml-2">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+                  <span className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" />
                   <span
                     className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0.1s" }}
                   />
                   <span
-                    className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                    className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0.2s" }}
                   />
                 </div>
@@ -383,7 +431,7 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
       {/* ───────────────────────────────────────────────── */}
       <form
         onSubmit={sendMessage}
-        className="p-4 border-t border-gray-200 bg-white flex gap-3"
+        className="p-4 border-t border-purple-100 bg-white/80 backdrop-blur-sm flex gap-3"
       >
         <input
           ref={inputRef}
@@ -393,15 +441,15 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
             setMessage(e.target.value);
             handleTyping();
           }}
-          placeholder="Escribe tu mensaje..."
+          placeholder="Escribe tu mensaje... 💜"
           disabled={!isConnected}
-          className="flex-1 border border-gray-300 rounded-full px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="flex-1 border border-purple-200 rounded-full px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
 
         <button
           type="submit"
           disabled={!isConnected || !message.trim() || isSending}
-          className="bg-purple-600 text-white rounded-full p-2.5 hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-full p-2.5 hover:from-purple-700 hover:to-pink-600 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Enviar mensaje"
         >
           <svg
