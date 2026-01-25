@@ -1,0 +1,319 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "🚦 Golden Signals Overview",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"api-gateway\"}[5m])) by (le)) * 1000",
+          "legendFormat": "P95 Latency"
+        }
+      ],
+      "title": "⏱️ LATENCY (P95)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{service=\"api-gateway\"}[5m]))",
+          "legendFormat": "Requests/s"
+        }
+      ],
+      "title": "📊 TRAFFIC (req/s)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+          "legendFormat": "Error %"
+        }
+      ],
+      "title": "❌ ERRORS (%)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg(sum(rate(container_cpu_usage_seconds_total{namespace=\"enova-staging\"}[5m])) by (pod) / sum(container_spec_cpu_quota{namespace=\"enova-staging\"}/container_spec_cpu_period{namespace=\"enova-staging\"}) by (pod)) * 100",
+          "legendFormat": "CPU %"
+        }
+      ],
+      "title": "🔥 SATURATION (CPU)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 6,
+      "title": "💬 Chat Service Metrics",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 6 },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "sum(ws_active_connections{service=\"chat-service\"})",
+          "legendFormat": "Active"
+        }
+      ],
+      "title": "🔌 WebSocket Connections",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 6 },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ws_message_duration_seconds_bucket{service=\"chat-service\"}[5m])) by (le)) * 1000",
+          "legendFormat": "P95"
+        }
+      ],
+      "title": "⚡ Chat Latency (P95)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 100 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 6 },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "sum(rate(ws_messages_total{service=\"chat-service\"}[5m]))",
+          "legendFormat": "msg/s"
+        }
+      ],
+      "title": "💬 Messages/sec",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "msg/s",
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "id": 10,
+      "title": "🐤 Canary vs Production",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 11 },
+      "id": 11,
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\", canary=\"true\"}[5m])) / sum(rate(http_requests_total{canary=\"true\"}[5m])) * 100",
+          "legendFormat": "Canary"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\", canary=\"false\"}[5m])) / sum(rate(http_requests_total{canary=\"false\"}[5m])) * 100",
+          "legendFormat": "Production"
+        }
+      ],
+      "title": "Error Rate: Canary vs Production",
+      "type": "timeseries",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 11 },
+      "id": 12,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{canary=\"true\"}[5m])) by (le)) * 1000",
+          "legendFormat": "Canary P95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{canary=\"false\"}[5m])) by (le)) * 1000",
+          "legendFormat": "Production P95"
+        }
+      ],
+      "title": "Latency: Canary vs Production",
+      "type": "timeseries",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "id": 13,
+      "title": "📈 Detailed Metrics",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "id": 14,
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{service=\"api-gateway\"}[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "title": "Requests by Status Code",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "tags": ["enova", "golden-signals", "microservices"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "enova-staging", "value": "enova-staging" },
+        "name": "namespace",
+        "options": [
+          { "selected": true, "text": "enova-staging", "value": "enova-staging" },
+          { "selected": false, "text": "enova-production", "value": "enova-production" }
+        ],
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "ENOVA - Golden Signals Dashboard",
+  "uid": "enova-golden-signals",
+  "version": 1
+}

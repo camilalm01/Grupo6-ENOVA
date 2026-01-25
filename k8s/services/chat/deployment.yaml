@@ -1,0 +1,171 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: enova
+  labels:
+    app: chat-service
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3002"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: enova-service
+      containers:
+        - name: chat-service
+          image: ${REGISTRY}/enova-chat:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3002
+              name: http
+
+          envFrom:
+            - configMapRef:
+                name: enova-config
+            - secretRef:
+                name: enova-secrets
+
+          env:
+            - name: SERVICE_NAME
+              value: "chat-service"
+            - name: PORT
+              value: "3002"
+            - name: OTEL_SERVICE_NAME
+              value: "chat-service"
+            # Redis para Socket.io adapter
+            - name: REDIS_HOST
+              value: "redis-master"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enova-secrets
+                  key: REDIS_PASSWORD
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            failureThreshold: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+      imagePullSecrets:
+        - name: registry-credentials
+
+      # Spread across nodes for high availability
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: chat-service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-service
+  namespace: enova
+  labels:
+    app: chat-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3002
+      targetPort: 3002
+      protocol: TCP
+      name: http
+  selector:
+    app: chat-service
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: chat-service-hpa
+  namespace: enova
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chat-service
+  minReplicas: 3
+  maxReplicas: 15
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 5
+          periodSeconds: 15
+      selectPolicy: Max

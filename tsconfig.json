@@ -38,6 +38,10 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "enova-backend",
+    "docker",
+    "k8s"
   ]
+
 }

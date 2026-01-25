@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: enova
+  labels:
+    app: auth-service
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+    spec:
+      serviceAccountName: enova-service
+      containers:
+        - name: auth-service
+          image: ${REGISTRY}/enova-auth:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+              name: http
+
+          envFrom:
+            - configMapRef:
+                name: enova-config
+            - secretRef:
+                name: enova-secrets
+
+          env:
+            - name: SERVICE_NAME
+              value: "auth-service"
+            - name: PORT
+              value: "3001"
+            - name: OTEL_SERVICE_NAME
+              value: "auth-service"
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            failureThreshold: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+      imagePullSecrets:
+        - name: registry-credentials
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: enova
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3001
+      targetPort: 3001
+      protocol: TCP
+      name: http
+  selector:
+    app: auth-service
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-service-hpa
+  namespace: enova
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: enova
+  labels:
+    app.kubernetes.io/name: enova
+    app.kubernetes.io/part-of: enova-platform

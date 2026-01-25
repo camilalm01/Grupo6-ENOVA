@@ -1,0 +1,64 @@
+# ENOVA Kubernetes Ingress - Full Migration (100%)
+# Fase Final: 100% del tráfico a microservicios
+# El Ingress legacy debe eliminarse después de aplicar este
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enova-production
+  namespace: enova-staging
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-connections: "50"
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Security
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+        - staging.enova.example.com
+      secretName: enova-tls-secret
+  rules:
+    - host: staging.enova.example.com
+      http:
+        paths:
+          # API Gateway
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 3000
+          # Health checks
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 3000
+          # WebSocket for Chat
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: chat-service
+                port:
+                  number: 3002
+          # Frontend (Next.js)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000

@@ -47,7 +47,7 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
   // ═══════════════════════════════════════════════════════
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(!!socket?.connected); // 👈 Inicializar con estado real
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -71,8 +71,14 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
   useEffect(() => {
     // Inicializar socket solo si no existe
     if (!socket) {
-      socket = io({
+      // Connect to the backend API Gateway, not the frontend
+      const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 
+                         process.env.NEXT_PUBLIC_API_URL || 
+                         'http://localhost:3000';
+      
+      socket = io(SOCKET_URL, {
         path: "/socket.io",
+        transports: ['websocket', 'polling'], // Try WebSocket first, fall back to polling
         auth: {
           // token: "tu-jwt-token-aqui" // Agregar si usas autenticación
         },
@@ -85,7 +91,7 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
     // 🛑 FIX: Si ya está conectado (al volver de otra página), sincronizar estado manualmente
     if (socket.connected) {
       console.log("⚡ Socket ya conectado, sincronizando estado...");
-      setIsConnected(true);
+      // setIsConnected(true); // Ya inicializado en useState
       socket.emit("join_room", { roomId, userId });
     }
 

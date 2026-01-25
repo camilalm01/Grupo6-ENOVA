@@ -1,0 +1,80 @@
+# ENOVA Kubernetes Ingress - Canary 10%
+# Envía 10% del tráfico a los nuevos microservicios
+# 90% sigue yendo al monolito legacy
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enova-canary
+  namespace: enova-staging
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"
+    # Opcional: Headers para testing forzado
+    nginx.ingress.kubernetes.io/canary-by-header: "x-canary"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "always"
+spec:
+  tls:
+    - hosts:
+        - staging.enova.example.com
+      secretName: enova-tls-secret
+  rules:
+    - host: staging.enova.example.com
+      http:
+        paths:
+          # API Gateway (microservicios)
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 3000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 3000
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: chat-service
+                port:
+                  number: 3002
+          # Frontend Next.js
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000
+---
+# Ingress principal (legacy) - 90% tráfico
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enova-legacy
+  namespace: enova-staging
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+    - hosts:
+        - staging.enova.example.com
+      secretName: enova-tls-secret
+  rules:
+    - host: staging.enova.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: legacy-monolith
+                port:
+                  number: 3000

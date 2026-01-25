@@ -1,12 +1,16 @@
 /**
  * MANEJADOR MODULAR DE WEBSOCKETS
- * 
+ *
  * Este archivo centraliza toda la lógica de eventos de Socket.io
  * para mantener el server.js limpio y facilitar el mantenimiento.
  */
 
-import { Server, Socket } from 'socket.io';
-import { saveChatMessage, getChatHistory, type MessageData } from '../services/chatService.ts';
+import { Server, Socket } from "socket.io";
+import {
+    getChatHistory,
+    type MessageData,
+    saveChatMessage,
+} from "../services/chatService.ts";
 
 interface JoinRoomData {
     roomId: string;
@@ -39,7 +43,7 @@ export function setupSocketHandlers(io: Server) {
     // Middleware de autenticación (opcional pero recomendado)
     io.use((socket: CustomSocket, next) => {
         // Aquí puedes validar tokens JWT, cookies, etc.
-        const token = socket.handshake.auth.token;
+        // const token = socket.handshake.auth.token;
 
         // Ejemplo: validar token (implementar según tu sistema de auth)
         // if (!token || !validateToken(token)) {
@@ -54,7 +58,7 @@ export function setupSocketHandlers(io: Server) {
     });
 
     // Evento principal: Nueva conexión
-    io.on('connection', (socket: CustomSocket) => {
+    io.on("connection", (socket: CustomSocket) => {
         console.log(`🟢 Cliente conectado: ${socket.id}`);
 
         // ═══════════════════════════════════════════════════════
@@ -64,12 +68,12 @@ export function setupSocketHandlers(io: Server) {
          * Permite al cliente unirse a una sala específica.
          * Útil para chats privados, salas de soporte, etc.
          */
-        socket.on('join_room', async (data: JoinRoomData) => {
+        socket.on("join_room", async (data: JoinRoomData) => {
             try {
                 const { roomId, userId } = data;
 
                 if (!roomId) {
-                    socket.emit('error', { message: 'ID de sala requerido' });
+                    socket.emit("error", { message: "ID de sala requerido" });
                     return;
                 }
 
@@ -77,27 +81,28 @@ export function setupSocketHandlers(io: Server) {
                 socket.join(roomId);
                 socket.currentRoom = roomId;
 
-                console.log(`👥 Usuario ${socket.id} se unió a la sala: ${roomId}`);
+                console.log(
+                    `👥 Usuario ${socket.id} se unió a la sala: ${roomId}`,
+                );
 
                 // Notificar a otros usuarios de la sala
-                socket.to(roomId).emit('user_joined', {
+                socket.to(roomId).emit("user_joined", {
                     userId: userId || socket.id,
-                    message: 'Un nuevo usuario se ha unido',
-                    timestamp: new Date().toISOString()
+                    message: "Un nuevo usuario se ha unido",
+                    timestamp: new Date().toISOString(),
                 });
 
                 // Enviar historial de mensajes al nuevo usuario
                 try {
                     const history = await getChatHistory(roomId, 50); // Últimos 50 mensajes
-                    socket.emit('chat_history', history);
+                    socket.emit("chat_history", history);
                 } catch (error) {
-                    console.error('Error al cargar historial:', error);
-                    socket.emit('chat_history', []); // Enviar array vacío si hay error
+                    console.error("Error al cargar historial:", error);
+                    socket.emit("chat_history", []); // Enviar array vacío si hay error
                 }
-
             } catch (error) {
-                console.error('❌ Error en join_room:', error);
-                socket.emit('error', { message: 'Error al unirse a la sala' });
+                console.error("❌ Error en join_room:", error);
+                socket.emit("error", { message: "Error al unirse a la sala" });
             }
         });
 
@@ -107,18 +112,19 @@ export function setupSocketHandlers(io: Server) {
         /**
          * Recibe un mensaje del cliente, lo persiste en BD y lo broadcast
          */
-        socket.on('send_message', async (messageData: MessageData) => {
+        socket.on("send_message", async (messageData: MessageData) => {
             try {
-                const { userId, roomId, message, username, clientMessageId } = messageData;
+                const { userId, roomId, message, username, clientMessageId } =
+                    messageData;
 
                 // Validaciones
-                if (!message || message.trim() === '') {
-                    socket.emit('error', { message: 'Mensaje vacío' });
+                if (!message || message.trim() === "") {
+                    socket.emit("error", { message: "Mensaje vacío" });
                     return;
                 }
 
                 if (!roomId) {
-                    socket.emit('error', { message: 'ID de sala requerido' });
+                    socket.emit("error", { message: "ID de sala requerido" });
                     return;
                 }
 
@@ -126,39 +132,41 @@ export function setupSocketHandlers(io: Server) {
                 const enrichedMessage = {
                     id: Date.now().toString(), // Temporal, se reemplazará con el ID de BD
                     userId: userId || socket.id,
-                    username: username || 'Usuaria Anónima',
+                    username: username || "Usuaria Anónima",
                     message: message.trim(),
                     roomId: roomId,
                     timestamp: new Date().toISOString(),
                     socketId: socket.id,
-                    clientMessageId: clientMessageId // 👈 Pasamos el ID del cliente
+                    clientMessageId: clientMessageId, // 👈 Pasamos el ID del cliente
                 };
 
-                console.log('📨 Mensaje recibido:', enrichedMessage);
+                console.log("📨 Mensaje recibido:", enrichedMessage);
 
                 // PERSISTENCIA: Guardar en base de datos (Supabase)
                 try {
                     const savedMessage = await saveChatMessage(enrichedMessage);
                     enrichedMessage.id = savedMessage.id; // Usar ID real de BD
                 } catch (dbError) {
-                    console.error('⚠️  Error al guardar en BD (continuando):', dbError);
+                    console.error(
+                        "⚠️  Error al guardar en BD (continuando):",
+                        dbError,
+                    );
                     // Continuar aunque falle la BD (mensajes en tiempo real)
                 }
 
                 // BROADCAST: Enviar a todos los usuarios de la sala
-                io.to(roomId).emit('receive_message', enrichedMessage);
+                io.to(roomId).emit("receive_message", enrichedMessage);
 
                 // Confirmación al emisor
-                socket.emit('message_sent', {
+                socket.emit("message_sent", {
                     success: true,
-                    messageId: enrichedMessage.id
+                    messageId: enrichedMessage.id,
                 });
-
             } catch (error) {
-                console.error('❌ Error en send_message:', error);
-                socket.emit('error', {
-                    message: 'Error al enviar mensaje',
-                    details: (error as Error).message
+                console.error("❌ Error en send_message:", error);
+                socket.emit("error", {
+                    message: "Error al enviar mensaje",
+                    details: (error as Error).message,
                 });
             }
         });
@@ -169,22 +177,22 @@ export function setupSocketHandlers(io: Server) {
         /**
          * Indicador de "está escribiendo..."
          */
-        socket.on('typing', (data: TypingData) => {
+        socket.on("typing", (data: TypingData) => {
             const { roomId, username, isTyping } = data;
 
             if (!roomId) return;
 
             // Enviar solo a otros usuarios de la sala (no al emisor)
-            socket.to(roomId).emit('user_typing', {
-                username: username || 'Alguien',
-                isTyping: isTyping
+            socket.to(roomId).emit("user_typing", {
+                username: username || "Alguien",
+                isTyping: isTyping,
             });
         });
 
         // ═══════════════════════════════════════════════════════
         // EVENTO: leave_room
         // ═══════════════════════════════════════════════════════
-        socket.on('leave_room', (data: LeaveRoomData) => {
+        socket.on("leave_room", (data: LeaveRoomData) => {
             const { roomId, userId } = data;
 
             if (!roomId) return;
@@ -193,25 +201,27 @@ export function setupSocketHandlers(io: Server) {
             console.log(`🔴 Usuario ${socket.id} salió de la sala: ${roomId}`);
 
             // Notificar a otros usuarios
-            socket.to(roomId).emit('user_left', {
+            socket.to(roomId).emit("user_left", {
                 userId: userId || socket.id,
-                message: 'Un usuario ha salido',
-                timestamp: new Date().toISOString()
+                message: "Un usuario ha salido",
+                timestamp: new Date().toISOString(),
             });
         });
 
         // ═══════════════════════════════════════════════════════
         // EVENTO: disconnect
         // ═══════════════════════════════════════════════════════
-        socket.on('disconnect', (reason) => {
-            console.log(`🔴 Cliente desconectado: ${socket.id} - Razón: ${reason}`);
+        socket.on("disconnect", (reason) => {
+            console.log(
+                `🔴 Cliente desconectado: ${socket.id} - Razón: ${reason}`,
+            );
 
             // Si estaba en una sala, notificar a otros usuarios
             if (socket.currentRoom) {
-                socket.to(socket.currentRoom).emit('user_left', {
+                socket.to(socket.currentRoom).emit("user_left", {
                     userId: socket.id,
-                    message: 'Un usuario se ha desconectado',
-                    timestamp: new Date().toISOString()
+                    message: "Un usuario se ha desconectado",
+                    timestamp: new Date().toISOString(),
                 });
             }
         });
@@ -219,15 +229,15 @@ export function setupSocketHandlers(io: Server) {
         // ═══════════════════════════════════════════════════════
         // EVENTO: error (manejo de errores del socket)
         // ═══════════════════════════════════════════════════════
-        socket.on('error', (error) => {
-            console.error('❌ Error en socket:', error);
+        socket.on("error", (error) => {
+            console.error("❌ Error en socket:", error);
         });
     });
 
     // Manejo de errores globales de Socket.io
-    io.engine.on('connection_error', (err) => {
-        console.error('❌ Error de conexión:', err);
+    io.engine.on("connection_error", (err) => {
+        console.error("❌ Error de conexión:", err);
     });
 
-    console.log('✅ Manejadores de WebSocket configurados');
+    console.log("✅ Manejadores de WebSocket configurados");
 }

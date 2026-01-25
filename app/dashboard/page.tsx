@@ -204,14 +204,25 @@ export default function HomePage() {
     const ok = window.confirm('¿Seguro que quieres eliminar esta publicación?');
     if (!ok) return;
 
-    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    try {
+      const { error, count } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user?.id); // Ensure user can only delete own posts
 
-    if (error) {
-      console.error('Error eliminando post', error);
-      return;
+      if (error) {
+        console.error('Error eliminando post:', error);
+        alert(`Error al eliminar: ${error.message}`);
+        return;
+      }
+
+      // Remove from local state
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (err) {
+      console.error('Error inesperado:', err);
+      alert('Error inesperado al eliminar la publicación');
     }
-
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
 
   const handleEditPost = (post: Post) => {

@@ -1,0 +1,32 @@
+# ENOVA Kubernetes Ingress - ROLLBACK
+# Uso de emergencia: Volver al monolito instantáneamente
+# Aplicar con: kubectl apply -f ingress-rollback.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enova-rollback
+  namespace: enova-staging
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # Forzar que TODO el tráfico vaya al legacy
+    nginx.ingress.kubernetes.io/canary: "false"
+spec:
+  tls:
+    - hosts:
+        - staging.enova.example.com
+      secretName: enova-tls-secret
+  rules:
+    - host: staging.enova.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: legacy-monolith
+                port:
+                  number: 3000
+---
+# Eliminar el canary ingress
+# kubectl delete ingress enova-canary -n enova-staging

@@ -10,28 +10,27 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     // El hash viene así: #access_token=...&type=signup&...
-    const hash = window.location.hash.substring(1); // quitamos el '#'
+    const hash = window.location.hash.substring(1); 
     const params = new URLSearchParams(hash);
 
     const error = params.get('error');
     const errorDescription = params.get('error_description');
 
     if (error) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus('error');
       setMessage(errorDescription || 'El enlace es inválido o ha expirado.');
-      return;
+    } else {
+        // Solo marcar éxito si no hay error
+        setStatus('success');
+        setMessage('Correo verificado con éxito. Ya puedes iniciar sesión.');
+
+        // Opcional: redirigir al login después de unos segundos
+        const timeout = setTimeout(() => {
+        router.push('/login');
+        }, 2500);
+        return () => clearTimeout(timeout);
     }
-
-    // Si no viene error, asumimos que la verificación fue OK
-    setStatus('success');
-    setMessage('Correo verificado con éxito. Ya puedes iniciar sesión.');
-
-    // Opcional: redirigir al login después de unos segundos
-    const timeout = setTimeout(() => {
-      router.push('/login');
-    }, 2500);
-
-    return () => clearTimeout(timeout);
   }, [router]);
 
   return (

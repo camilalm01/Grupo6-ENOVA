@@ -1,0 +1,51 @@
+# ENOVA Kubernetes Ingress - Canary 50%
+# Fase 2: 50% del tráfico a microservicios
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enova-canary
+  namespace: enova-staging
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "50"
+    nginx.ingress.kubernetes.io/canary-by-header: "x-canary"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "always"
+spec:
+  tls:
+    - hosts:
+        - staging.enova.example.com
+      secretName: enova-tls-secret
+  rules:
+    - host: staging.enova.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 3000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 3000
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: chat-service
+                port:
+                  number: 3002
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000
