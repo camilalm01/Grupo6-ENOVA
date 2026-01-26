@@ -37,6 +37,11 @@ ARG SERVICE_NAME=api-gateway
 # Build del servicio específico
 RUN npm run build -- ${SERVICE_NAME}
 
+# Debug: Show dist structure
+RUN echo "=== Build output for ${SERVICE_NAME} ===" && \
+    find dist -name "main.js" && \
+    ls -la dist/apps/ || echo "No dist/apps found"
+
 # Eliminar dependencias de desarrollo
 RUN npm prune --production
 
@@ -74,5 +79,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Comando de inicio
-CMD ["node", "dist/apps/${SERVICE_NAME}/main.js"]
+# Comando de inicio (ruta correcta según output de nest build)
+CMD node dist/apps/$SERVICE_NAME/apps/$SERVICE_NAME/src/main.js

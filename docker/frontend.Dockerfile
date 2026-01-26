@@ -26,17 +26,20 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Variables de entorno para build
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG NEXT_PUBLIC_WS_URL
+# Variables de entorno para build (con defaults para CI)
+ARG NEXT_PUBLIC_API_URL="http://localhost:4000"
+ARG NEXT_PUBLIC_SUPABASE_URL="https://placeholder.supabase.co"
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY="placeholder-anon-key"
+ARG NEXT_PUBLIC_WS_URL="ws://localhost:4000"
 
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
 ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Ensure public directory exists (may be empty)
+RUN mkdir -p public
 
 # Build con standalone output
 RUN npm run build

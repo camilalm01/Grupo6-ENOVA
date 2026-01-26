@@ -7,7 +7,9 @@ metadata:
     app: chat-service
     tier: backend
 spec:
-  replicas: 3
+  replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: chat-service
@@ -21,10 +23,9 @@ spec:
         prometheus.io/port: "3002"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: enova-service
       containers:
         - name: chat-service
-          image: ${REGISTRY}/enova-chat:${IMAGE_TAG}
+          image: ${REGISTRY}/chat-service:${IMAGE_TAG}
           imagePullPolicy: Always
           ports:
             - containerPort: 3002
@@ -41,8 +42,12 @@ spec:
               value: "chat-service"
             - name: PORT
               value: "3002"
+            - name: CHAT_SERVICE_PORT
+              value: "3002"
             - name: OTEL_SERVICE_NAME
               value: "chat-service"
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@rabbitmq:5672"
             # Redis para Socket.io adapter
             - name: REDIS_HOST
               value: "redis-master"
@@ -63,15 +68,13 @@ spec:
               memory: "1Gi"
 
           startupProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: 3002
             failureThreshold: 30
             periodSeconds: 10
 
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: 3002
             initialDelaySeconds: 10
             periodSeconds: 15
@@ -79,8 +82,7 @@ spec:
             failureThreshold: 3
 
           readinessProbe:
-            httpGet:
-              path: /health/ready
+            tcpSocket:
               port: 3002
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -91,13 +93,12 @@ spec:
             runAsNonRoot: true
             runAsUser: 1001
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
 
       imagePullSecrets:
-        - name: registry-credentials
+        - name: ghcr-credentials
 
       # Spread across nodes for high availability
       topologySpreadConstraints:
@@ -137,7 +138,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: chat-service
-  minReplicas: 3
+  minReplicas: 1
   maxReplicas: 15
   metrics:
     - type: Resource

@@ -7,7 +7,9 @@ metadata:
     app: community-service
     tier: backend
 spec:
-  replicas: 2
+  replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: community-service
@@ -18,16 +20,18 @@ spec:
         tier: backend
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "3003"
+        prometheus.io/port: "9091"
+        prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: enova-service
       containers:
         - name: community-service
-          image: ${REGISTRY}/enova-community:${IMAGE_TAG}
+          image: ${REGISTRY}/community-service:${IMAGE_TAG}
           imagePullPolicy: Always
           ports:
             - containerPort: 3003
-              name: http
+              name: tcp
+            - containerPort: 9091
+              name: metrics
 
           envFrom:
             - configMapRef:
@@ -40,8 +44,16 @@ spec:
               value: "community-service"
             - name: PORT
               value: "3003"
+            - name: COMMUNITY_SERVICE_PORT
+              value: "3003"
             - name: OTEL_SERVICE_NAME
               value: "community-service"
+            - name: METRICS_PORT
+              value: "9091"
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@rabbitmq:5672"
+            - name: COMMUNITY_SERVICE_HOST
+              value: "0.0.0.0"
 
           resources:
             requests:
@@ -52,23 +64,20 @@ spec:
               memory: "512Mi"
 
           startupProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: 3003
             failureThreshold: 30
             periodSeconds: 10
 
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: 3003
             initialDelaySeconds: 10
             periodSeconds: 15
             failureThreshold: 3
 
           readinessProbe:
-            httpGet:
-              path: /health/ready
+            tcpSocket:
               port: 3003
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -78,13 +87,12 @@ spec:
             runAsNonRoot: true
             runAsUser: 1001
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
 
       imagePullSecrets:
-        - name: registry-credentials
+        - name: ghcr-credentials
 
 ---
 apiVersion: v1
@@ -113,7 +121,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: community-service
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 8
   metrics:
     - type: Resource

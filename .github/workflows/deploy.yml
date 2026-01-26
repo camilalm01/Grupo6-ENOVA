@@ -108,11 +108,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Convert repo name to lowercase
+        id: repo
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service.name }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}/${{ matrix.service.name }}
           tags: |
             type=sha,prefix=
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
@@ -134,8 +138,8 @@ jobs:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
     needs: build
-    # Disable deployment temporarily until cluster is ready
-    if: false # github.ref == 'refs/heads/main'
+    # Re-enabled for DigitalOcean deployment
+    if: github.ref == 'refs/heads/main'
 
     environment:
       name: production
@@ -144,6 +148,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
@@ -186,25 +195,91 @@ jobs:
 
       - name: Deploy to new color (Green)
         run: |
-          # Update image tags in manifests
+          # Update image tags in manifests (convert repo name to lowercase)
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           find k8s/services -name "*.yaml" -exec sed -i \
-            -e "s|\${REGISTRY}|${{ env.REGISTRY }}/${{ github.repository }}|g" \
+            -e "s|\${REGISTRY}|${{ env.REGISTRY }}/${REPO_LOWER}|g" \
             -e "s|\${IMAGE_TAG}|${{ steps.tag.outputs.TAG }}|g" {} \;
 
-          # Add version label for blue-green
-          find k8s/services -name "*.yaml" -exec sed -i \
-            -e "s|app: \(.*\)|app: \1\n        version: ${{ steps.color.outputs.NEW_COLOR }}|g" {} \;
+          # Create namespace first and wait for it to be ready
+          kubectl apply -f k8s/base/namespace.yaml
+          kubectl wait --for=jsonpath='{.status.phase}'=Active namespace/enova --timeout=30s
 
-          # Apply new deployment
-          kubectl apply -f k8s/base/
+          # Create GHCR pull secret for private images
+          kubectl create secret docker-registry ghcr-credentials \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace=enova --dry-run=client -o yaml | kubectl apply -f -
+
+          # Apply configmap
+          kubectl apply -f k8s/base/configmap.yaml
+
+          # Create secrets from GitHub Secrets (not from placeholder file)
+          kubectl create secret generic enova-secrets \
+            --from-literal=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --from-literal=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            --from-literal=SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            --from-literal=SUPABASE_JWT_SECRET="${{ secrets.SUPABASE_JWT_SECRET }}" \
+            --from-literal=AUTH_DATABASE_URL="${{ secrets.AUTH_DATABASE_URL }}" \
+            --from-literal=COMMUNITY_DATABASE_URL="${{ secrets.COMMUNITY_DATABASE_URL }}" \
+            --from-literal=CHAT_DATABASE_URL="${{ secrets.CHAT_DATABASE_URL }}" \
+            --from-literal=RABBITMQ_DEFAULT_USER="${{ secrets.RABBITMQ_DEFAULT_USER }}" \
+            --from-literal=RABBITMQ_DEFAULT_PASS="${{ secrets.RABBITMQ_DEFAULT_PASS }}" \
+            --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+            --from-literal=INTERNAL_SERVICE_KEY="${{ secrets.INTERNAL_SERVICE_KEY }}" \
+            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --namespace=enova --dry-run=client -o yaml | kubectl apply -f -
+
+          # Restart RabbitMQ to pick up new secrets
+          kubectl rollout restart deployment/rabbitmq -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/rabbitmq -n ${{ env.K8S_NAMESPACE }} --timeout=120s
+
+          # Delete deployments that need probe type changes (HTTP->TCP)
+          # This forces recreation instead of patching which fails when changing probe types
+          kubectl delete deployment auth-service -n ${{ env.K8S_NAMESPACE }} --ignore-not-found=true
+          kubectl delete deployment community-service -n ${{ env.K8S_NAMESPACE }} --ignore-not-found=true
+          kubectl delete deployment chat-service -n ${{ env.K8S_NAMESPACE }} --ignore-not-found=true
+
+          # Apply service deployments
           kubectl apply -f k8s/services/ -R
 
+          # Deploy monitoring stack (Prometheus + Grafana)
+          kubectl apply -f k8s/monitoring/
+
       - name: Wait for rollout
+        id: rollout
+        continue-on-error: true
         run: |
           kubectl rollout status deployment/api-gateway -n ${{ env.K8S_NAMESPACE }} --timeout=300s
           kubectl rollout status deployment/auth-service -n ${{ env.K8S_NAMESPACE }} --timeout=300s
           kubectl rollout status deployment/community-service -n ${{ env.K8S_NAMESPACE }} --timeout=300s
           kubectl rollout status deployment/chat-service -n ${{ env.K8S_NAMESPACE }} --timeout=300s
+
+      - name: Debug pod failure
+        if: steps.rollout.outcome == 'failure'
+        run: |
+          echo "=== Pod Status ==="
+          kubectl get pods -n ${{ env.K8S_NAMESPACE }} -o wide
+          echo ""
+          echo "=== Describe api-gateway pod ==="
+          kubectl describe pod -n ${{ env.K8S_NAMESPACE }} -l app=api-gateway
+          echo ""
+          echo "=== api-gateway logs ==="
+          kubectl logs -n ${{ env.K8S_NAMESPACE }} -l app=api-gateway --tail=50 || echo "No logs available"
+          echo ""
+          echo "=== auth-service logs ==="
+          kubectl logs -n ${{ env.K8S_NAMESPACE }} -l app=auth-service --tail=50 || echo "No logs available"
+          echo ""
+          echo "=== chat-service logs ==="
+          kubectl logs -n ${{ env.K8S_NAMESPACE }} -l app=chat-service --tail=50 || echo "No logs available"
+          echo ""
+          echo "=== community-service logs ==="
+          kubectl logs -n ${{ env.K8S_NAMESPACE }} -l app=community-service --tail=50 || echo "No logs available"
+          echo ""
+          echo "=== Events ==="
+          kubectl get events -n ${{ env.K8S_NAMESPACE }} --sort-by='.lastTimestamp' | tail -30
+          exit 1
 
       - name: Run smoke tests
         id: smoke
@@ -239,16 +314,17 @@ jobs:
         run: |
           # Keep old deployment at 1 replica for quick rollback
           kubectl scale deployment -n ${{ env.K8S_NAMESPACE }} \
-            -l version=${{ steps.color.outputs.OLD_COLOR }} --replicas=1
+            -l version=${{ steps.color.outputs.OLD_COLOR }} --replicas=1 || true
 
       - name: Rollback on failure
         if: failure()
+        continue-on-error: true
         run: |
-          echo "Deployment failed, rolling back..."
-          kubectl rollout undo deployment/api-gateway -n ${{ env.K8S_NAMESPACE }}
-          kubectl rollout undo deployment/auth-service -n ${{ env.K8S_NAMESPACE }}
-          kubectl rollout undo deployment/community-service -n ${{ env.K8S_NAMESPACE }}
-          kubectl rollout undo deployment/chat-service -n ${{ env.K8S_NAMESPACE }}
+          echo "Deployment failed, attempting rollback..."
+          kubectl rollout undo deployment/api-gateway -n ${{ env.K8S_NAMESPACE }} || echo "No history for api-gateway"
+          kubectl rollout undo deployment/auth-service -n ${{ env.K8S_NAMESPACE }} || echo "No history for auth-service"
+          kubectl rollout undo deployment/community-service -n ${{ env.K8S_NAMESPACE }} || echo "No history for community-service"
+          kubectl rollout undo deployment/chat-service -n ${{ env.K8S_NAMESPACE }} || echo "No history for chat-service"
 
       - name: Notify deployment success
         if: success()

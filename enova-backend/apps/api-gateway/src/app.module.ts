@@ -9,85 +9,98 @@ import { CircuitBreakerService } from "./services/circuit-breaker.service";
 import { AggregationService } from "./services/aggregation.service";
 import { CircuitBreakerInterceptor } from "./interceptors/circuit-breaker.interceptor";
 import { HealthController } from "./health/health.controller";
+import { PrometheusModule, HttpMetricsInterceptor } from "@app/common";
 
 @Module({
-    imports: [
-        // Configuración centralizada
-        ConfigModule.forRoot({
-            isGlobal: true,
-            envFilePath: ".env",
+  imports: [
+    // Configuración centralizada
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ".env",
+    }),
+
+    // Prometheus Metrics Module (HTTP mode - serves /metrics on main port)
+    PrometheusModule.forRoot({
+      serviceName: process.env.OTEL_SERVICE_NAME || "api-gateway",
+      isHttpService: true,
+      metricsPath: "/metrics",
+      enableDefaultMetrics: true,
+    }),
+
+    // Rate Limiting global
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          ttl: configService.get<number>("RATE_LIMIT_TTL") || 60000,
+          limit: configService.get<number>("RATE_LIMIT_MAX") || 100,
+        },
+      ],
+    }),
+
+    // Cliente para Auth Service (TCP)
+    ClientsModule.registerAsync([
+      {
+        name: "AUTH_SERVICE",
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.TCP,
+          options: {
+            host: configService.get<string>("AUTH_SERVICE_HOST") || "localhost",
+            port: configService.get<number>("AUTH_SERVICE_PORT") || 3001,
+          },
         }),
-
-        // Rate Limiting global
-        ThrottlerModule.forRootAsync({
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService) => [{
-                ttl: configService.get<number>("RATE_LIMIT_TTL") || 60000,
-                limit: configService.get<number>("RATE_LIMIT_MAX") || 100,
-            }],
+      },
+      {
+        name: "COMMUNITY_SERVICE",
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.TCP,
+          options: {
+            host:
+              configService.get<string>("COMMUNITY_SERVICE_HOST") ||
+              "localhost",
+            port: configService.get<number>("COMMUNITY_SERVICE_PORT") || 3003,
+          },
         }),
+      },
+    ]),
 
-        // Cliente para Auth Service (TCP)
-        ClientsModule.registerAsync([
-            {
-                name: "AUTH_SERVICE",
-                imports: [ConfigModule],
-                inject: [ConfigService],
-                useFactory: (configService: ConfigService) => ({
-                    transport: Transport.TCP,
-                    options: {
-                        host: configService.get<string>("AUTH_SERVICE_HOST") ||
-                            "localhost",
-                        port: configService.get<number>("AUTH_SERVICE_PORT") ||
-                            3001,
-                    },
-                }),
-            },
-            {
-                name: "COMMUNITY_SERVICE",
-                imports: [ConfigModule],
-                inject: [ConfigService],
-                useFactory: (configService: ConfigService) => ({
-                    transport: Transport.TCP,
-                    options: {
-                        host: configService.get<string>(
-                            "COMMUNITY_SERVICE_HOST",
-                        ) || "localhost",
-                        port: configService.get<number>(
-                            "COMMUNITY_SERVICE_PORT",
-                        ) || 3003,
-                    },
-                }),
-            },
-        ]),
+    ProxyModule,
+  ],
+  controllers: [HealthController],
+  providers: [
+    // Circuit Breaker Service
+    CircuitBreakerService,
+    AggregationService,
 
-        ProxyModule,
-    ],
-    controllers: [HealthController],
-    providers: [
-        // Circuit Breaker Service
-        CircuitBreakerService,
-        AggregationService,
+    // Guard global para autenticación
+    {
+      provide: APP_GUARD,
+      useClass: SupabaseAuthGuard,
+    },
 
-        // Guard global para autenticación
-        {
-            provide: APP_GUARD,
-            useClass: SupabaseAuthGuard,
-        },
+    // Rate Limiting Guard
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
 
-        // Rate Limiting Guard
-        {
-            provide: APP_GUARD,
-            useClass: ThrottlerGuard,
-        },
+    // HTTP Metrics Interceptor
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
+    },
 
-        // Circuit Breaker Interceptor (opcional, para usar con decorador)
-        {
-            provide: APP_INTERCEPTOR,
-            useClass: CircuitBreakerInterceptor,
-        },
-    ],
-    exports: [CircuitBreakerService, AggregationService],
+    // Circuit Breaker Interceptor (opcional, para usar con decorador)
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CircuitBreakerInterceptor,
+    },
+  ],
+  exports: [CircuitBreakerService, AggregationService],
 })
 export class AppModule {}

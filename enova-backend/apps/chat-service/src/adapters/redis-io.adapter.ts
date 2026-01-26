@@ -14,9 +14,17 @@ export class RedisIoAdapter extends IoAdapter {
     /**
      * Conectar a Redis para sincronización de múltiples instancias
      */
-    async connectToRedis(host: string, port: number): Promise<void> {
+    async connectToRedis(
+        host: string,
+        port: number,
+        password?: string,
+    ): Promise<void> {
         try {
-            const pubClient = createClient({ url: `redis://${host}:${port}` });
+            const redisUrl = password
+                ? `redis://:${password}@${host}:${port}`
+                : `redis://${host}:${port}`;
+
+            const pubClient = createClient({ url: redisUrl });
             const subClient = pubClient.duplicate();
 
             await Promise.all([pubClient.connect(), subClient.connect()]);
