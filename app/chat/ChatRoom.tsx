@@ -17,6 +17,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { supabase } from "@/lib/services/supabaseClient";
 
 // ═══════════════════════════════════════════════════════
 // TIPOS Y INTERFACES
@@ -29,7 +30,7 @@ interface Message {
   timestamp: string;
   socketId?: string;
   clientMessageId?: string; // 👈 ID temporal del cliente
-  pending?: boolean;        // 👈 Estado de envío
+  pending?: boolean; // 👈 Estado de envío
 }
 
 interface ChatRoomProps {
@@ -69,31 +70,43 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
   // CONEXIÓN Y CONFIGURACIÓN DE SOCKET.IO
   // ═══════════════════════════════════════════════════════
   useEffect(() => {
-    // Inicializar socket solo si no existe
-    if (!socket) {
-      // Connect to the backend API Gateway, not the frontend
-      const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 
-                         process.env.NEXT_PUBLIC_API_URL || 
-                         'http://localhost:3000';
-      
-      socket = io(SOCKET_URL, {
-        path: "/socket.io",
-        transports: ['websocket', 'polling'], // Try WebSocket first, fall back to polling
-        auth: {
-          // token: "tu-jwt-token-aqui" // Agregar si usas autenticación
-        },
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5
-      });
-    }
+    // Función async para obtener el token y conectar
+    const initializeSocket = async () => {
+      // Obtener token JWT de Supabase
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-    // 🛑 FIX: Si ya está conectado (al volver de otra página), sincronizar estado manualmente
-    if (socket.connected) {
-      console.log("⚡ Socket ya conectado, sincronizando estado...");
-      // setIsConnected(true); // Ya inicializado en useState
-      socket.emit("join_room", { roomId, userId });
-    }
+      // Inicializar socket solo si no existe
+      if (!socket) {
+        // Connect to the Chat Service (WebSocket)
+        const SOCKET_URL =
+          process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3002";
+
+        console.log("🔌 Conectando a WebSocket:", SOCKET_URL);
+
+        socket = io(SOCKET_URL, {
+          path: "/socket.io",
+          transports: ["websocket", "polling"], // Try WebSocket first, fall back to polling
+          auth: {
+            token: token || "", // Pasar token JWT de Supabase
+          },
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 10,
+          timeout: 10000,
+        });
+      }
+
+      // 🛑 FIX: Si ya está conectado (al volver de otra página), sincronizar estado manualmente
+      if (socket.connected) {
+        console.log("⚡ Socket ya conectado, sincronizando estado...");
+        socket.emit("join_room", { roomId, userId });
+      }
+    };
+
+    initializeSocket();
 
     // ───────────────────────────────────────────────────
     // LISTENERS DE CONEXIÓN
@@ -126,7 +139,9 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
       setMessages((prev) => {
         // Si el mensaje tiene clientMessageId, buscamos si ya existe (optimistic update)
         if (newMessage.clientMessageId) {
-          const existingIndex = prev.findIndex(m => m.clientMessageId === newMessage.clientMessageId);
+          const existingIndex = prev.findIndex(
+            (m) => m.clientMessageId === newMessage.clientMessageId,
+          );
           if (existingIndex !== -1) {
             // Reemplazamos el mensaje pendiente con el confirmado
             const updated = [...prev];
@@ -154,7 +169,10 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
       // Opcional: Mostrar notificación de salida
     };
 
-    const handleUserTyping = (data: { username: string; isTyping: boolean }) => {
+    const handleUserTyping = (data: {
+      username: string;
+      isTyping: boolean;
+    }) => {
       if (data.isTyping) {
         setIsTyping(true);
         setTypingUser(data.username);
@@ -170,22 +188,30 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
     };
 
     // ───────────────────────────────────────────────────
-    // REGISTRAR LISTENERS
+    // REGISTRAR LISTENERS (después de un pequeño delay para que initializeSocket termine)
     // ───────────────────────────────────────────────────
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("connect_error", handleConnectError);
-    socket.on("receive_message", handleReceiveMessage);
-    socket.on("chat_history", handleChatHistory);
-    socket.on("user_joined", handleUserJoined);
-    socket.on("user_left", handleUserLeft);
-    socket.on("user_typing", handleUserTyping);
-    socket.on("error", handleError);
+    const registerListeners = () => {
+      if (!socket) return;
+
+      socket.on("connect", handleConnect);
+      socket.on("disconnect", handleDisconnect);
+      socket.on("connect_error", handleConnectError);
+      socket.on("receive_message", handleReceiveMessage);
+      socket.on("chat_history", handleChatHistory);
+      socket.on("user_joined", handleUserJoined);
+      socket.on("user_left", handleUserLeft);
+      socket.on("user_typing", handleUserTyping);
+      socket.on("error", handleError);
+    };
+
+    // Esperar un tick para que initializeSocket cree el socket
+    const timeoutId = setTimeout(registerListeners, 100);
 
     // ───────────────────────────────────────────────────
     // CLEANUP: Remover listeners al desmontar
     // ───────────────────────────────────────────────────
     return () => {
+      clearTimeout(timeoutId);
       socket?.off("connect", handleConnect);
       socket?.off("disconnect", handleDisconnect);
       socket?.off("connect_error", handleConnectError);
@@ -228,20 +254,20 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
       timestamp,
       socketId: socket.id,
       clientMessageId,
-      pending: true // Marcamos como pendiente
+      pending: true, // Marcamos como pendiente
     };
 
-    setMessages(prev => [...prev, optimisticMessage]);
+    setMessages((prev) => [...prev, optimisticMessage]);
     setIsSending(true);
 
-    const messageData: Omit<Message, 'id'> = {
+    const messageData: Omit<Message, "id"> = {
       userId,
       username,
       message: message.trim(),
       timestamp,
       socketId: socket.id,
       clientMessageId, // Enviamos el ID para reconciliación
-      pending: false
+      pending: false,
     };
 
     // Emitir evento al servidor
@@ -289,18 +315,90 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
   // FUNCIÓN: FORMATEAR FECHA
   // ═══════════════════════════════════════════════════════
   const formatTime = (timestamp: string) => {
-    if (!timestamp) return '';
+    if (!timestamp) return "";
     const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return '';
+    if (isNaN(date.getTime())) return "";
     return date.toLocaleTimeString("es-ES", {
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
   // ═══════════════════════════════════════════════════════
   // RENDERIZADO DEL COMPONENTE
   // ═══════════════════════════════════════════════════════
+
+  // PANTALLA DE CARGA mientras se conecta el WebSocket
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col h-[500px] w-full border border-gray-100 rounded-3xl shadow-lg bg-white overflow-hidden">
+        {/* Header */}
+        <div className="p-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2 className="font-semibold">Sala de Apoyo 💜</h2>
+              <p className="text-xs text-purple-100">#{roomId}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse" />
+            <span className="text-sm">Conectando...</span>
+          </div>
+        </div>
+
+        {/* Loading Screen */}
+        <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-purple-50/30 to-white">
+          <div className="relative">
+            {/* Círculo animado */}
+            <div className="w-20 h-20 rounded-full border-4 border-purple-200 border-t-purple-600 animate-spin"></div>
+            {/* Ícono central */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl">💬</span>
+            </div>
+          </div>
+          <p className="mt-6 text-gray-600 font-medium">
+            Conectando al chat...
+          </p>
+          <p className="mt-2 text-sm text-gray-400">
+            Estableciendo conexión segura
+          </p>
+
+          {/* Progress dots */}
+          <div className="flex gap-1 mt-4">
+            <div
+              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            ></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[500px] w-full border border-gray-100 rounded-3xl shadow-lg bg-white overflow-hidden">
       {/* ───────────────────────────────────────────────── */}
@@ -364,7 +462,9 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
               </svg>
             </div>
             <p className="font-medium text-gray-600">No hay mensajes aún 💬</p>
-            <p className="text-sm text-gray-400 mt-1">¡Sé la primera en iniciar la conversación!</p>
+            <p className="text-sm text-gray-400 mt-1">
+              ¡Sé la primera en iniciar la conversación!
+            </p>
           </div>
         ) : (
           <>
@@ -385,10 +485,11 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
 
                   {/* Burbuja del mensaje */}
                   <div
-                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm transition-opacity duration-200 ${isOwn
-                      ? "bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-br-sm"
-                      : "bg-white border border-purple-100 text-gray-800 rounded-bl-sm"
-                      } ${msg.pending ? "opacity-70" : "opacity-100"}`}
+                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm transition-opacity duration-200 ${
+                      isOwn
+                        ? "bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-br-sm"
+                        : "bg-white border border-purple-100 text-gray-800 rounded-bl-sm"
+                    } ${msg.pending ? "opacity-70" : "opacity-100"}`}
                   >
                     <p className="text-sm leading-relaxed break-words">
                       {msg.message}
@@ -397,7 +498,9 @@ export default function ChatRoom({ roomId, userId, username }: ChatRoomProps) {
 
                   {/* Timestamp */}
                   {msg.timestamp && (
-                    <span className={`text-xs text-gray-400 mt-1 flex items-center gap-1 ${isOwn ? "mr-2" : "ml-2"}`}>
+                    <span
+                      className={`text-xs text-gray-400 mt-1 flex items-center gap-1 ${isOwn ? "mr-2" : "ml-2"}`}
+                    >
                       {formatTime(msg.timestamp)}
                       {msg.pending && (
                         <span className="w-2 h-2 rounded-full border border-gray-400 border-t-transparent animate-spin" />

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/services/supabaseClient';
-import { useSupabaseUser } from '@/lib/services/useSupabaseUser';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/services/supabaseClient";
+import { useSupabaseUser } from "@/lib/services/useSupabaseUser";
 
 type Profile = {
   full_name: string | null;
@@ -23,24 +23,24 @@ type Post = {
 // Normalize raw DB rows into the Post shape the UI expects.
 function normalizePost(raw: any): Post {
   return {
-    id: String(raw.id ?? ''),
-    user_id: String(raw.user_id ?? ''),
-    content: raw.content ?? '',
+    id: String(raw.id ?? ""),
+    user_id: String(raw.user_id ?? ""),
+    content: raw.content ?? "",
     tags: Array.isArray(raw.tags)
       ? raw.tags
-      : typeof raw.tags === 'string'
+      : typeof raw.tags === "string"
         ? raw.tags
-          .split(',')
-          .map((t: string) => t.trim())
-          .filter(Boolean)
+            .split(",")
+            .map((t: string) => t.trim())
+            .filter(Boolean)
         : [],
     image_url: raw.image_url ?? null,
     created_at: raw.created_at ?? new Date().toISOString(),
     profiles: raw.profiles
       ? {
-        full_name: raw.profiles.full_name ?? null,
-        avatar_url: raw.profiles.avatar_url ?? null,
-      }
+          full_name: raw.profiles.full_name ?? null,
+          avatar_url: raw.profiles.avatar_url ?? null,
+        }
       : null,
   };
 }
@@ -52,9 +52,9 @@ export default function HomePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [content, setContent] = useState('');
-  const [tags, setTags] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [content, setContent] = useState("");
+  const [tags, setTags] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function HomePage() {
   // Redirigir si no está logueada
   useEffect(() => {
     if (!loadingUser && !user) {
-      router.push('/login'); // ajusta a tu ruta real
+      router.push("/login"); // ajusta a tu ruta real
     }
   }, [loadingUser, user, router]);
 
@@ -70,12 +70,12 @@ export default function HomePage() {
   useEffect(() => {
     const fetchPosts = async () => {
       const { data, error } = await supabase
-        .from('posts')
+        .from("posts")
         .select(/* ... */)
-        .order('created_at', { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error cargando posts', error);
+        console.error("Error cargando posts", error);
         setPosts([]);
       } else if (Array.isArray(data)) {
         const normalized: Post[] = data.map((d) => normalizePost(d));
@@ -94,9 +94,9 @@ export default function HomePage() {
     try {
       await supabase.auth.signOut();
       // opcional: limpiar estados extra si tienes
-      router.push('/login'); // ajusta si usas otra ruta de login
+      router.push("/login"); // ajusta si usas otra ruta de login
     } catch (err) {
-      console.error('Error al cerrar sesión', err);
+      console.error("Error al cerrar sesión", err);
     }
   };
 
@@ -106,21 +106,21 @@ export default function HomePage() {
     setCreating(true);
 
     const tagsArray = tags
-      .split(',')
-      .map(t => t.trim())
+      .split(",")
+      .map((t) => t.trim())
       .filter(Boolean);
 
     // 👉 MODO EDITAR
     if (isEditing && editingPostId) {
       const { data, error } = await supabase
-        .from('posts')
+        .from("posts")
         .update({
           content,
           tags: tagsArray,
           image_url: imageUrl || null,
         })
-        .eq('id', editingPostId)
-        .eq('user_id', user.id) // seguridad extra por si acaso
+        .eq("id", editingPostId)
+        .eq("user_id", user.id) // seguridad extra por si acaso
         .select(
           `
         id,
@@ -133,21 +133,21 @@ export default function HomePage() {
           full_name,
           avatar_url
         )
-      `
+      `,
         )
         .single();
 
       if (error) {
-        console.error('Error actualizando post', error);
+        console.error("Error actualizando post", error);
       } else if (data) {
         const updated = normalizePost(data);
-        setPosts(prev =>
-          prev.map(p => (p.id === updated.id ? updated : p))
+        setPosts((prev) =>
+          prev.map((p) => (p.id === updated.id ? updated : p)),
         );
         // Resetear formulario y modo edición
-        setContent('');
-        setTags('');
-        setImageUrl('');
+        setContent("");
+        setTags("");
+        setImageUrl("");
         setEditingPostId(null);
         setIsEditing(false);
       }
@@ -158,7 +158,7 @@ export default function HomePage() {
 
     // MODO CREAR
     const { data, error } = await supabase
-      .from('posts')
+      .from("posts")
       .insert({
         user_id: user.id,
         content,
@@ -177,42 +177,43 @@ export default function HomePage() {
         full_name,
         avatar_url
       )
-    `
+    `,
       )
       .single();
 
     if (error) {
-      console.error('Error creando post', error);
-      if (error.code === '23503') {
-        alert('Error: Tu usuario no tiene un perfil asociado. Por favor contacta a soporte o intenta reloguearte.');
+      console.error("Error creando post", error);
+      if (error.code === "23503") {
+        alert(
+          "Error: Tu usuario no tiene un perfil asociado. Por favor contacta a soporte o intenta reloguearte.",
+        );
       } else {
-        alert('Error al crear la publicación. Inténtalo de nuevo.');
+        alert("Error al crear la publicación. Inténtalo de nuevo.");
       }
     } else if (data) {
       const newPost = normalizePost(data);
-      setPosts(prev => [newPost, ...prev]);
-      setContent('');
-      setTags('');
-      setImageUrl('');
+      setPosts((prev) => [newPost, ...prev]);
+      setContent("");
+      setTags("");
+      setImageUrl("");
     }
 
     setCreating(false);
   };
 
-
   const handleDeletePost = async (postId: string) => {
-    const ok = window.confirm('¿Seguro que quieres eliminar esta publicación?');
+    const ok = window.confirm("¿Seguro que quieres eliminar esta publicación?");
     if (!ok) return;
 
     try {
       const { error, count } = await supabase
-        .from('posts')
+        .from("posts")
         .delete()
-        .eq('id', postId)
-        .eq('user_id', user?.id); // Ensure user can only delete own posts
+        .eq("id", postId)
+        .eq("user_id", user?.id); // Ensure user can only delete own posts
 
       if (error) {
-        console.error('Error eliminando post:', error);
+        console.error("Error eliminando post:", error);
         alert(`Error al eliminar: ${error.message}`);
         return;
       }
@@ -220,8 +221,8 @@ export default function HomePage() {
       // Remove from local state
       setPosts((prev) => prev.filter((p) => p.id !== postId));
     } catch (err) {
-      console.error('Error inesperado:', err);
-      alert('Error inesperado al eliminar la publicación');
+      console.error("Error inesperado:", err);
+      alert("Error inesperado al eliminar la publicación");
     }
   };
 
@@ -231,21 +232,20 @@ export default function HomePage() {
 
     // Rellenamos el formulario con los datos del post
     setContent(post.content);
-    setTags(post.tags.join(','));
-    setImageUrl(post.image_url ?? '');
+    setTags(post.tags.join(","));
+    setImageUrl(post.image_url ?? "");
 
     // Opcional: hacer scroll al form
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleString('es-ES', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
+    return d.toLocaleString("es-ES", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -265,8 +265,8 @@ export default function HomePage() {
   const selfProfileName =
     (user.user_metadata?.full_name as string) ||
     (user.user_metadata?.name as string) ||
-    (user.email?.split('@')[0] as string) ||
-    'Usuaria';
+    (user.email?.split("@")[0] as string) ||
+    "Usuaria";
 
   return (
     <div className="min-h-screen bg-gradient-radial pb-16 md:pb-0">
@@ -277,16 +277,14 @@ export default function HomePage() {
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
               🌸
             </div>
-            <span className="font-semibold text-lg text-gray-800">
-              ENOVA
-            </span>
+            <span className="font-semibold text-lg text-gray-800">ENOVA</span>
           </div>
 
           <div className="flex items-center gap-4">
             <nav className="hidden md:flex gap-6 text-sm text-gray-600">
               <button className="font-medium text-purple-600">Inicio</button>
               <button
-                onClick={() => router.push('/chat')}
+                onClick={() => router.push("/chat")}
                 className="hover:text-purple-600 transition-colors"
               >
                 Chat
@@ -296,7 +294,7 @@ export default function HomePage() {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsAvatarMenuOpen(prev => !prev)}
+                onClick={() => setIsAvatarMenuOpen((prev) => !prev)}
                 className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer hover:shadow-lg transition-all"
               >
                 {selfProfileName.charAt(0).toUpperCase()}
@@ -308,7 +306,7 @@ export default function HomePage() {
                     type="button"
                     onClick={() => {
                       setIsAvatarMenuOpen(false);
-                      router.push('/profile');
+                      router.push("/profile");
                     }}
                     className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors"
                   >
@@ -372,8 +370,12 @@ export default function HomePage() {
                   className="mt-2 md:mt-0 btn btn-primary px-6 py-2.5 text-sm"
                 >
                   {creating
-                    ? (isEditing ? 'Guardando...' : 'Publicando...')
-                    : (isEditing ? '✨ Guardar cambios' : '💜 Publicar')}
+                    ? isEditing
+                      ? "Guardando..."
+                      : "Publicando..."
+                    : isEditing
+                      ? "✨ Guardar cambios"
+                      : "💜 Publicar"}
                 </button>
               </div>
             </div>
@@ -389,13 +391,19 @@ export default function HomePage() {
         ) : posts.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-3xl border border-gray-100">
             <span className="text-5xl mb-4 block">💜</span>
-            <p className="text-gray-600 font-medium">Aún no hay publicaciones</p>
-            <p className="text-gray-400 text-sm mt-1">¡Sé la primera en compartir algo!</p>
+            <p className="text-gray-600 font-medium">
+              Aún no hay publicaciones
+            </p>
+            <p className="text-gray-400 text-sm mt-1">
+              ¡Sé la primera en compartir algo!
+            </p>
           </div>
         ) : (
           <section className="space-y-4">
             {posts.map((post) => {
-              const isOwner = post.user_id === user.id;
+              // Debug: Comparar IDs para verificar coincidencia
+              const isOwner =
+                String(post.user_id).trim() === String(user.id).trim();
               const profile = post.profiles;
               const name = profile?.full_name || selfProfileName;
 
@@ -410,7 +418,7 @@ export default function HomePage() {
                       {profile?.avatar_url ? (
                         <img
                           src={profile.avatar_url}
-                          alt={name ?? 'Usuaria'}
+                          alt={name ?? "Usuaria"}
                           className="w-11 h-11 rounded-full object-cover border-2 border-purple-100"
                         />
                       ) : (
@@ -463,10 +471,7 @@ export default function HomePage() {
                     {post.tags?.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {post.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="badge"
-                          >
+                          <span key={tag} className="badge">
                             {tag}
                           </span>
                         ))}
@@ -484,26 +489,59 @@ export default function HomePage() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200 px-4 py-2 z-10">
         <div className="flex justify-around">
           <button className="flex flex-col items-center text-purple-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+              />
             </svg>
             <span className="text-xs mt-1">Inicio</span>
           </button>
           <button
-            onClick={() => router.push('/chat')}
+            onClick={() => router.push("/chat")}
             className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"
+              />
             </svg>
             <span className="text-xs mt-1">Chat</span>
           </button>
           <button
-            onClick={() => router.push('/profile')}
+            onClick={() => router.push("/profile")}
             className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+              />
             </svg>
             <span className="text-xs mt-1">Perfil</span>
           </button>

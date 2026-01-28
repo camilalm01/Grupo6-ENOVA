@@ -9,58 +9,58 @@
   /* ──────────────────────────────────────────────────────────────────────────
      COLORES PRIMARIOS - Púrpura empoderador
      ────────────────────────────────────────────────────────────────────────── */
-  --color-primary: #9333EA;
-  --color-primary-light: #C084FC;
-  --color-primary-soft: #F3E8FF;
-  --color-primary-dark: #7E22CE;
-  --color-primary-darker: #6B21A8;
+  --color-primary: #9333ea;
+  --color-primary-light: #c084fc;
+  --color-primary-soft: #f3e8ff;
+  --color-primary-dark: #7e22ce;
+  --color-primary-darker: #6b21a8;
 
   /* ──────────────────────────────────────────────────────────────────────────
      COLORES SECUNDARIOS - Acentos cálidos y femeninos
      ────────────────────────────────────────────────────────────────────────── */
-  --color-secondary: #F472B6;
-  --color-secondary-light: #FBCFE8;
-  --color-secondary-soft: #FDF2F8;
-  --color-warm: #FBBF24;
-  --color-warm-light: #FEF3C7;
-  --color-terracotta: #EA580C;
-  --color-terracotta-light: #FFEDD5;
+  --color-secondary: #f472b6;
+  --color-secondary-light: #fbcfe8;
+  --color-secondary-soft: #fdf2f8;
+  --color-warm: #fbbf24;
+  --color-warm-light: #fef3c7;
+  --color-terracotta: #ea580c;
+  --color-terracotta-light: #ffedd5;
 
   /* ──────────────────────────────────────────────────────────────────────────
      COLORES NEUTROS - Base cálida y acogedora
      ────────────────────────────────────────────────────────────────────────── */
-  --color-background: #FFFBF7;
-  --color-background-alt: #FEF7F0;
-  --color-surface: #FFFFFF;
-  --color-surface-raised: #FFFFFF;
-  --color-text-primary: #1F2937;
-  --color-text-secondary: #4B5563;
-  --color-text-muted: #9CA3AF;
-  --color-text-inverse: #FFFFFF;
-  --color-border: #E5E7EB;
-  --color-border-soft: #F3F4F6;
-  --color-border-focus: #C084FC;
+  --color-background: #fffbf7;
+  --color-background-alt: #fef7f0;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  --color-text-inverse: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-soft: #f3f4f6;
+  --color-border-focus: #c084fc;
 
   /* ──────────────────────────────────────────────────────────────────────────
      COLORES DE ESTADO - Feedback emocional
      ────────────────────────────────────────────────────────────────────────── */
-  --color-success: #10B981;
-  --color-success-light: #D1FAE5;
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
   --color-success-dark: #059669;
-  --color-error: #F87171;
-  --color-error-light: #FEE2E2;
-  --color-error-dark: #DC2626;
-  --color-warning: #FBBF24;
-  --color-warning-light: #FEF3C7;
-  --color-warning-dark: #D97706;
-  --color-info: #A78BFA;
-  --color-info-light: #EDE9FE;
+  --color-error: #f87171;
+  --color-error-light: #fee2e2;
+  --color-error-dark: #dc2626;
+  --color-warning: #fbbf24;
+  --color-warning-light: #fef3c7;
+  --color-warning-dark: #d97706;
+  --color-info: #a78bfa;
+  --color-info-light: #ede9fe;
 
   /* ──────────────────────────────────────────────────────────────────────────
      TIPOGRAFÍA
      ────────────────────────────────────────────────────────────────────────── */
-  --font-primary: 'Nunito', system-ui, -apple-system, sans-serif;
-  --font-display: 'Playfair Display', Georgia, serif;
+  --font-primary: "Nunito", system-ui, -apple-system, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
 
   /* ──────────────────────────────────────────────────────────────────────────
      ESPACIADO
@@ -90,9 +90,12 @@
      SOMBRAS - Suaves y acogedoras
      ────────────────────────────────────────────────────────────────────────── */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xl:
+    0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.05);
   --shadow-glow: 0 0 20px rgb(147 51 234 / 0.15);
   --shadow-glow-pink: 0 0 20px rgb(244 114 182 / 0.15);
 
@@ -154,7 +157,11 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-dark) 100%
+  );
   color: var(--color-text-inverse);
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius-full);
@@ -162,7 +169,11 @@ body {
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-darker) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-dark) 0%,
+    var(--color-primary-darker) 100%
+  );
   box-shadow: var(--shadow-lg), var(--shadow-glow);
   transform: translateY(-1px);
 }
@@ -265,7 +276,11 @@ body {
 }
 
 .card-featured {
-  background: linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-secondary-soft) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-soft) 0%,
+    var(--color-secondary-soft) 100%
+  );
   border-color: var(--color-primary-light);
 }
 
@@ -309,7 +324,7 @@ body {
 
 .badge-pink {
   background: var(--color-secondary-light);
-  color: #BE185D;
+  color: #be185d;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -360,7 +375,11 @@ body {
   border-radius: var(--radius-full);
   font-weight: 600;
   text-transform: uppercase;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-secondary) 100%
+  );
   color: var(--color-text-inverse);
 }
 
@@ -492,7 +511,8 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -510,7 +530,8 @@ body {
 }
 
 @keyframes bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -562,22 +583,38 @@ body {
    ========================================================================== */
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-secondary) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .bg-gradient-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-dark) 100%
+  );
 }
 
 .bg-gradient-warm {
-  background: linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-secondary-soft) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-soft) 0%,
+    var(--color-secondary-soft) 100%
+  );
 }
 
 .bg-gradient-radial {
-  background: radial-gradient(circle at top right, var(--color-primary-soft), var(--color-background));
+  background: radial-gradient(
+    circle at top right,
+    var(--color-primary-soft),
+    var(--color-background)
+  );
 }
 
 /* Efecto de vidrio (glassmorphism) */
@@ -617,4 +654,91 @@ body {
 ::selection {
   background: var(--color-primary-soft);
   color: var(--color-primary-dark);
+}
+
+/* ==========================================================================
+   🎭 ANIMACIONES PARA SKELETONS Y LOADING STATES
+   ========================================================================== */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite ease-in-out;
+  background-size: 200% 100%;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ==========================================================================
+   📱 RESPONSIVE UTILITIES
+   ========================================================================== */
+
+/* Safe area padding for mobile devices */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Touch-friendly tap targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ==========================================================================
+   ♿ ACCESSIBILITY ENHANCEMENTS
+   ========================================================================== */
+
+/* Focus visible for keyboard navigation */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-shimmer,
+  .animate-pulse-soft {
+    animation: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000;
+    --color-text-primary: #000;
+    --color-background: #fff;
+  }
 }
